@@ -9,7 +9,7 @@ bibliography: biblio.bib
 ---
 
 ```{r setup, include=F}
-knitr::opts_chunk$set(echo = F, message=F, warning=F, error=F)
+knitr::opts_chunk$set(echo = F, message=F, warning=F, error=F, fig.pos = "H", out.extra = "")
 library(tidyverse)
 library(kableExtra)
 library(knitr)
@@ -31,7 +31,7 @@ En este informe se evalua la utilización de carbón para generación de electri
 
 # Metodología 
 
-- Con el proposito de investigar las energias renovables en un rango de 25 años, de un total de `r energy_db %>% group_by(country_or_area) %>% summarise(n()) %>% nrow()` paises o areas se investigaron paises que generaran energía eléctrica y solar (tabla \@ref(tab:tabla1)), para luego seleccionar el top 5 a través de un promedio en 25 años desde 1990 a 2014 (tabla \@ref(tab:tabla2)). Luego se identificó el uso de carbón para producción de energía eléctrica en estos 5 paises.
+Con el proposito de investigar las energias renovables en un rango de 25 años, de un total de `r energy_db %>% group_by(country_or_area) %>% summarise(n()) %>% nrow()` paises o areas se investigaron paises que generaran energía eléctrica y solar (tabla \@ref(tab:tabla1)), para luego seleccionar el top 5 a través de un promedio en 25 años desde 1990 a 2014 (tabla \@ref(tab:tabla2)). Luego se identificó el uso de carbón para producción de energía eléctrica en estos 5 paises.
 
 ```{r tabla1, fig.cap="Cantidad de paises involucrados en distintos tipos de energia"}
 energy_db_category_electricity <- energy_db %>% group_by(category) %>% 
@@ -131,5 +131,13 @@ ggplot(Aug2_coal, aes(x = year, y = .fitted)) + geom_line(aes(color = country_or
   labs(y = "Predicción", 
        x = "Año")
 ```
+
+# Conclusiones
+
+- A pesar de un notable aumento de el uso de energías renovables durante los últimos años, aún pareciera que no existe una mayor disminución de el uso de energías contaminantes como el carbón.
+
+- Paises como China, a partir de 2010 comenzaron a utilizar energías más limpias, lo cual no implicó que la curva de utilización de carbón se volviera negativa.
+
+- Es preocupante que hasta el año 2014 la predicción en base a un modelo lineal mostrara que levemente aún sigue aumentando el consumo de carbón, a pesar de que existen una gran cantidad de alternativas de energías no renovables.
 
 # Referencias
