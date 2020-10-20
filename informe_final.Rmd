@@ -68,6 +68,9 @@ kable(top5_paises, caption = "top 5 paises en producción de energías renovable
 # Resultados
 
 ## Top 5 paises productores de energias renovables
+
+Se pudo observar Paises como China, Alemania, India, España y Estados Unidos llevando la delantera en cúanto a la generación de electricidad a partir de energías de tipo renovable como la solar y eólica. Experimentando una curva creciente a través de los 25 años, a exepción de China que comenzó con este tipo de energías a partir de 2010 (Figura \@ref(fig:figura1))
+
 ```{r}
 energy_db_parsed <- energy_db %>% 
   dplyr::filter(commodity_transaction %in% c("Electricity - total solar production", 
@@ -82,7 +85,7 @@ energy_db_parsed <- energy_db %>%
   summarise(mean = mean(quantity))
 ```
 
-```{r figura1}
+```{r figura1, fig.cap = "Generación de electricidad a partir de energías renovables"}
 ggplot(energy_db_parsed, aes(x = year, y = log(mean))) +
   geom_point(aes(color = country_or_area)) + geom_line(aes(color = country_or_area)) +
   theme_bw() + labs(y = "Generación de electricidad log(Kilowatt-hours, million)", 
@@ -97,13 +100,15 @@ Fit2 <- lm(mean ~ country_or_area + year, data = energy_db_parsed)
 Aug2 <- augment(Fit2) %>% full_join(energy_db_parsed)
 ```
 
-```{r figura 2}
+```{r figura2, fig.cap = "Modelo lineal"}
 ggplot(Aug2, aes(x = year, y = .fitted)) + geom_line(aes(color = country_or_area)) +
     labs(y = "Predicción", 
        x = "Año")
 ```
 
-## Cómo se comportan estos paises en el uso de carbón a través de los años?
+## ¿Cómo se comportan estos paises en el uso de carbón a través de los años?
+
+Así como en la generación de electricidad a partir de energias de tipo renovable, se observa a China llevando la delantera en la generación de electricidad mediante la utilización de carbón a través de los años. Sin embargo, pareciera notarse una estabilización de la curva en el resto de los paises. (Figura \@ref(fig:figura3))
 
 ```{r}
 coal_countries <- energy_db_parsed %>% dplyr::select(country_or_area) %>% left_join(energy_db) %>% 
@@ -111,7 +116,7 @@ coal_countries <- energy_db_parsed %>% dplyr::select(country_or_area) %>% left_j
 ```
 
 
-```{r figura 3}
+```{r figura3, fig.cap = "Generación de electricidad a partir del uso de carbón"}
 ggplot(coal_countries, aes(x = year, y = log(quantity))) +
   geom_point(aes(color = country_or_area)) +
   geom_line(aes(color = country_or_area)) +
@@ -126,7 +131,7 @@ Fit2_coal <- lm(quantity ~ country_or_area + year, data = coal_countries)
 Aug2_coal <- augment(Fit2_coal) %>% full_join(coal_countries)
 ```
 
-```{r figura 4}
+```{r figura4, fig.cap = "Modelo lineal"}
 ggplot(Aug2_coal, aes(x = year, y = .fitted)) + geom_line(aes(color = country_or_area)) + 
   labs(y = "Predicción", 
        x = "Año")
