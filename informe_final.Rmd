@@ -1,0 +1,135 @@
+---
+title: "Consumo de carbón en paises con mayor uso de energías renovables"
+author: "Joaquin Gutierrez Benavente"
+date: "20/10/2020"
+output: 
+  bookdown::pdf_document2:
+    fig.caption: yes
+bibliography: biblio.bib
+---
+
+```{r setup, include=F}
+knitr::opts_chunk$set(echo = F, message=F, warning=F, error=F)
+library(tidyverse)
+library(kableExtra)
+library(knitr)
+library(broom)
+link_de_descarga <- "https://www.kaggle.com/unitednations/international-energy-statistics?select=all_energy_statistics.csv"
+energy_db <- read.csv("all_energy_statistics.csv")
+```
+# Introducción
+
+El último informe de la Agencia Internacional de la Energía (IEA, por sus siglas en inglés) ha revelado que el carbón seguirá siendo la principal fuente de energía del mundo. Dicho material representa casi el 40% de la generación de electricidad y, con ello, también supone el 40% de las emisiones de dióxido de carbono relacionadas con la energía. 
+
+En un escenario global marcado por la emergencia que implica la crisis climática, cada vez más acuciante y responsable de numerosas catástrofes naturales que han asolado al planeta en los últimos tiempos, el estudio asevera que la demanda mundial de carbón experimentó un pico sin precedentes en 2018, alcanzando un máximo histórico. En concreto, se incrementó en un 1,1% en comparación con el año anterior. 
+
+Aunque parece haberse registrado un ligero ápice de cambio durante el presente año, con la disminución de la generación de energía de carbón, la IEA explica que esto se ha debido a “circunstancias particulares en algunas regiones específicas”, por lo que “es poco probable que sea el comienzo de una tendencia duradera”. 
+
+De hecho, el informe desvela que, en los próximos cinco años, “la demanda mundial de carbón se mantendrá estable, respaldada por el resistente mercado chino, que representa la mitad del consumo mundial”. No obstante, “esta estabilidad podría verse socavada por políticas climáticas más fuertes por parte de los gobiernos o precios más bajos del gas natural”, entre otros factores. [@book]
+
+En este informe se evalua la utilización de carbón para generación de electricidad en los 5 paises con mayor producción de energía eólica y solar.
+
+# Metodología 
+
+- Con el proposito de investigar las energias renovables en un rango de 25 años, de un total de `r energy_db %>% group_by(country_or_area) %>% summarise(n()) %>% nrow()` paises o areas se investigaron paises que generaran energía eléctrica y solar (tabla \@ref(tab:tabla1)), para luego seleccionar el top 5 a través de un promedio en 25 años desde 1990 a 2014 (tabla \@ref(tab:tabla2)). Luego se identificó el uso de carbón para producción de energía eléctrica en estos 5 paises.
+
+```{r tabla1, fig.cap="Cantidad de paises involucrados en distintos tipos de energia"}
+energy_db_category_electricity <- energy_db %>% group_by(category) %>% 
+  dplyr::filter(grepl('wind', category)) %>% 
+  group_by(country_or_area) %>% summarise(n = n()) %>% group_by() %>% summarise(Generacion_eEolica = n())
+
+energy_db_category_solar <- energy_db %>% group_by(category) %>% dplyr::filter(grepl('solar', category)) %>% 
+  group_by(country_or_area) %>% summarise(n = n()) %>% group_by() %>% summarise(Generacion_eSolar = n())
+
+energy_db_category_coal <- energy_db %>% group_by(category) %>% dplyr::filter(grepl('hard_coal', category)) %>% 
+  group_by(country_or_area) %>% summarise(n = n()) %>% group_by() %>% summarise(consumo_carbon = n())
+
+Paises_involucrados <- 
+  bind_cols(energy_db_category_electricity, energy_db_category_solar, energy_db_category_coal)
+kable(Paises_involucrados, caption = "Número de paises involucrados") %>%  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+```{r tabla2}
+top5_paises <- energy_db %>% 
+  dplyr::filter(commodity_transaction %in% c("Electricity - total solar production", 
+                                             "Electricity - total wind production"), quantity > 0.0) %>%
+  group_by(country_or_area) %>% 
+  summarise(mean = mean(quantity), sd = sd(quantity)) %>% dplyr::filter(!is.na(sd)) %>%
+  slice_max(order_by = mean, n = 5) %>% 
+  left_join(energy_db) %>% 
+  dplyr::filter(commodity_transaction %in% c("Electricity - total solar production", 
+                                             "Electricity - total wind production"), quantity > 0.0) %>%
+  group_by(country_or_area) %>% 
+  summarise(promedio_energias_renovables = mean(quantity))
+
+kable(top5_paises, caption = "top 5 paises en producción de energías renovables en 25 años") %>%  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+# Resultados
+
+## Top 5 paises productores de energias renovables
+```{r}
+energy_db_parsed <- energy_db %>% 
+  dplyr::filter(commodity_transaction %in% c("Electricity - total solar production", 
+                                             "Electricity - total wind production"), quantity > 0.0) %>%
+  group_by(country_or_area) %>% 
+  summarise(mean = mean(quantity), sd = sd(quantity)) %>% dplyr::filter(!is.na(sd)) %>%
+  slice_max(order_by = mean, n = 5) %>% 
+  left_join(energy_db) %>% 
+  dplyr::filter(commodity_transaction %in% c("Electricity - total solar production", 
+                                             "Electricity - total wind production"), quantity > 0.0) %>%
+  group_by(country_or_area, year) %>% 
+  summarise(mean = mean(quantity))
+```
+
+```{r renewable}
+ggplot(energy_db_parsed, aes(x = year, y = log(mean))) +
+  geom_point(aes(color = country_or_area)) + geom_line(aes(color = country_or_area)) +
+  theme_bw() + labs(y = "Generación de electricidad log(Kilowatt-hours, million)", 
+       x = "Año")
+```
+
+
+## Modelo lineal de top 5 paises en uso de energias eólica y solar.
+
+```{r}
+Fit2 <- lm(mean ~ country_or_area + year, data = energy_db_parsed)
+Aug2 <- augment(Fit2) %>% full_join(energy_db_parsed)
+```
+
+```{r}
+ggplot(Aug2, aes(x = year, y = .fitted)) + geom_line(aes(color = country_or_area)) +
+    labs(y = "Predicción", 
+       x = "Año")
+```
+
+## Cómo se comportan estos paises en el uso de carbón a través de los años?
+
+```{r}
+coal_countries <- energy_db_parsed %>% dplyr::select(country_or_area) %>% left_join(energy_db) %>% 
+  dplyr::filter(commodity_transaction == "Hard coal - final energy consumption") 
+```
+
+
+```{r coal}
+ggplot(coal_countries, aes(x = year, y = log(quantity))) +
+  geom_point(aes(color = country_or_area)) +
+  geom_line(aes(color = country_or_area)) +
+  theme_bw() + labs(y = "Generación de electricidad log(Kilowatt-hours, million)", 
+       x = "Año")
+```
+
+## Modelo lineal de utilización de carbón en top 5 paises productores de energía solar y eólica.
+
+```{r}
+Fit2_coal <- lm(quantity ~ country_or_area + year, data = coal_countries)
+Aug2_coal <- augment(Fit2_coal) %>% full_join(coal_countries)
+```
+
+```{r}
+ggplot(Aug2_coal, aes(x = year, y = .fitted)) + geom_line(aes(color = country_or_area)) + 
+  labs(y = "Predicción", 
+       x = "Año")
+```
+
+# Referencias
